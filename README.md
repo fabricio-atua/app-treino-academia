@@ -28,8 +28,8 @@ A lista de exercícios e os vídeos são compartilhados entre todos.
 
 Os treinos ficam na **mesma planilha do bazar**, em abas próprias. As abas `itens` e `vendas` não são tocadas.
 
-- **treino_<nome do aluno>** (ex.: `treino_Fabrício Lopes`): o histórico daquele aluno, uma aba por aluno.
-  Na primeira vez, a aba vazia `Página1` vira `treino_Fabrício Lopes`. Se a `Página1` tiver algum conteúdo, ela
+- **Treino <nome do aluno>** (ex.: `Treino Fabrício Lopes`, `Treino Anah`): o histórico daquele aluno, uma aba por aluno.
+  Na primeira vez, a aba vazia `Página1` vira `Treino Fabrício Lopes`. Se a `Página1` tiver algum conteúdo, ela
   é mantida e o app cria uma aba nova. A aba de um aluno novo é criada quando ele é criado no app.
   Cada série concluída vira uma linha:
   `data | dia_treino | exercicio | serie | peso_kg | reps | hora | registrado_em | intervalo_seg`

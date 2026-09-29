@@ -27,7 +27,7 @@ REGISTROS_HEADER = [
 ALUNO_PADRAO = "Fabrício Lopes"
 NOVO_ALUNO = "＋ Novo aluno"
 EXERCICIOS_HEADER = ["exercicio", "regiao", "musculo", "video"]
-PREFIXO_ALUNO = "treino_"  # uma aba por aluno: "treino_Fabrício Lopes"
+PREFIXO_ALUNO = "Treino "  # uma aba por aluno: "Treino Fabrício Lopes", "Treino Anah"
 ABA_PLANO = "treinos_academia_plano"
 ABA_EXERCICIOS = "treinos_academia_exercicios"
 OUTRO = "✏️ Outro (digitar o nome)"
@@ -474,7 +474,7 @@ def ao_criar_aluno():
         return
     existente = next((a for a in st.session_state["alunos"] if a.lower() == nome.lower()), None)
     try:
-        trocar_aluno(existente or nome)  # cria a aba "treino_<nome>" se ainda não existir
+        trocar_aluno(existente or nome)  # cria a aba "Treino <nome>" se ainda não existir
     except Exception as erro:
         st.session_state["aviso"] = f"Não consegui criar a aba do aluno: {erro}"
         return
