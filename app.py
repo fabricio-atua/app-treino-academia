@@ -56,8 +56,11 @@ PLANO_INICIAL = {
 # (série | peso | reps | salvar), e os botões +/- somem para sobrar espaço.
 CSS = """
 <style>
-div[data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 0.5rem !important; }
+div[data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 0.3rem !important; }
 div[data-testid="stHorizontalBlock"] > div { min-width: 0 !important; }
+/* Botões estreitos (💾 🗑️ ⬆️): sem a margem interna de 12px, o ícone cabe mesmo em tela de 320px */
+div[data-testid="stHorizontalBlock"] button { padding-left: 2px !important; padding-right: 2px !important; min-width: 0 !important; }
+div[data-testid="stHorizontalBlock"] input { padding-left: 8px !important; padding-right: 4px !important; }
 button[data-testid="stNumberInputStepUp"], button[data-testid="stNumberInputStepDown"] { display: none; }
 .block-container { padding-top: 2.5rem; padding-bottom: 4rem; }
 .serie-num { font-weight: 700; padding-top: 0.55rem; white-space: nowrap; }
@@ -859,7 +862,7 @@ def tela_montar(plano):
                   on_click=ao_adicionar_exercicio, args=(prefixo, dia))
 
 
-COLUNAS_SERIE = [0.6, 2, 2, 1.1, 0.8]
+COLUNAS_SERIE = [0.5, 1.8, 1.8, 1, 1]
 
 
 def exercicios_do_treino(plano, do_dia, dia, chave_extras):
