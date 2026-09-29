@@ -1,0 +1,6 @@
+.streamlit/secrets.toml
+__pycache__/
+*.pyc
+*.log
+# gerador do app antigo em HTML, fica só no computador
+academia.py
