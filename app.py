@@ -193,6 +193,18 @@ def conectar_planilha():
     import gspread
     from google.oauth2.service_account import Credentials
 
+    # Mensagem clara quando os Secrets do Streamlit Cloud não foram colados inteiros (só os nomes, nunca os valores)
+    try:
+        encontrados = list(st.secrets.keys())
+    except Exception:
+        encontrados = []
+    faltando = [k for k in ("planilha_id", "gcp_service_account") if k not in encontrados]
+    if faltando:
+        raise RuntimeError(
+            f"faltam nos Secrets do app: {', '.join(faltando)}. "
+            f"Encontrei: {', '.join(encontrados) if encontrados else 'nenhum secret'}. "
+            "Cole o secrets.toml inteiro em Settings > Secrets e salve.")
+
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=SCOPES)
     planilha = gspread.authorize(creds).open_by_key(st.secrets["planilha_id"])
     # A planilha é a do bazar: só mexemos nas abas de treino; itens e vendas não são tocadas
