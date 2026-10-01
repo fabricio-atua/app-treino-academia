@@ -7,6 +7,8 @@ do Google, então o histórico não se perde ao trocar de celular ou limpar o na
 ## O que o app faz
 
 - Abre no treino do dia, com as mesmas séries, pesos e reps da última vez que você fez cada exercício.
+- Todos os exercícios começam abertos. Quando todas as séries de um exercício estão gravadas, ele fecha e ganha ✅; toque nele para reabrir.
+- Depois de digitar a senha, o app não pede de novo por 4 horas sem uso, mesmo que o celular apague a tela ou você troque de app. Para mudar o tempo, use `horas_sessao` nos secrets.
 - 💾 grava a série. Depois disso o botão vira ✅ e fica travado; se você mudar o peso ou as reps, ele volta a 💾 para gravar a correção.
 - 🗑️ exclui uma série (se ela já estiver gravada, pede confirmação e renumera as seguintes). **＋ Série** adiciona uma série.
 - ⏱️ cronômetro de descanso desde a última série gravada.
@@ -51,6 +53,7 @@ Copie `.streamlit/secrets.toml.example` para `.streamlit/secrets.toml` e preench
 
 - `planilha_id`: o mesmo do app do bazar.
 - `senha_app`: uma senha sua. O link do Streamlit é público, então sem senha qualquer pessoa com o link veria e editaria seus treinos.
+- `horas_sessao` (opcional, padrão 4): por quantas horas sem uso o app fica liberado depois de digitar a senha.
 - `[gcp_service_account]`: copie o bloco inteiro do `secrets.toml` do app do bazar.
 
 Esse arquivo **nunca vai para o GitHub** (já está no `.gitignore`).

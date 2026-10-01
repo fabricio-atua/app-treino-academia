@@ -1,7 +1,10 @@
+import hashlib
+import hmac
 import inspect
 import json
 import os
 import re
+import time
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -440,19 +443,50 @@ def fmt_num(valor):
 
 # ---------- Acesso ----------
 
+def horas_de_acesso():
+    try:
+        return float(segredo("horas_sessao") or 4)
+    except (TypeError, ValueError):
+        return 4.0
+
+
+def assinar(senha, validade):
+    return hmac.new(senha.encode(), str(validade).encode(), hashlib.sha256).hexdigest()[:20]
+
+
+def passe_valido(senha, passe):
+    """O passe é "<validade>.<assinatura>": só quem sabe a senha consegue gerar um."""
+    validade, _, assinatura = str(passe or "").partition(".")
+    if not validade.isdigit() or not hmac.compare_digest(assinatura, assinar(senha, validade)):
+        return False
+    return time.time() < int(validade)
+
+
+def renovar_passe(senha):
+    # A validade conta a partir do último uso; arredondada em 10 min para o endereço não mudar a cada toque
+    validade = int(time.time() // 600 * 600 + horas_de_acesso() * 3600)
+    passe = f"{validade}.{assinar(senha, validade)}"
+    if st.query_params.get("acesso") != passe:
+        st.query_params["acesso"] = passe
+
+
 def liberar_acesso():
     senha = segredo("senha_app")
-    if not senha or st.session_state.get("liberado"):
+    if not senha:
         return
-    # O link salvo no celular pode levar ?chave=..., para não pedir a senha toda vez
-    if st.query_params.get("chave") == senha:
+    # Quando a tela do celular apaga, o Streamlit perde a sessão e abre outra. O passe no
+    # endereço (?acesso=...) segura o login por algumas horas, sem pedir a senha de novo.
+    if (st.session_state.get("liberado") or st.query_params.get("chave") == senha
+            or passe_valido(senha, st.query_params.get("acesso"))):
         st.session_state["liberado"] = True
+        renovar_passe(senha)
         return
     st.subheader("🏋️ Meu Treino")
     digitada = st.text_input("Senha", type="password")
     if digitada:
         if digitada == senha:
             st.session_state["liberado"] = True
+            renovar_passe(senha)
             st.rerun()
         st.error("Senha incorreta.")
     st.stop()
@@ -921,12 +955,16 @@ def tela_treino(plano, registros):
         qtd = st.session_state[chave_qtd]
         total += qtd
 
-        with st.container(border=True):
+        # Fica aberto até todas as séries estarem gravadas; aí fecha e mostra ✅ (toque para reabrir)
+        n_salvas = salvas_hoje[salvas_hoje["serie"].between(1, qtd)]["serie"].nunique()
+        concluido = qtd > 0 and n_salvas == qtd
+        rotulo = f"{'✅' if concluido else '🏋️'} **{nome}** · {n_salvas}/{qtd} séries"
+        with st.expander(rotulo, expanded=not concluido):
             if ex["extra"]:
                 detalhe = "incluído só neste treino" + (f" · meta {ex['meta_reps']} reps" if ex["meta_reps"] else "")
             else:
                 detalhe = f"plano: {ex['series']} séries · meta {ex['meta_reps']} reps"
-            st.markdown(f"**{nome}**  \n{detalhe}")
+            st.caption(detalhe)
             como_fazer(nome, f"tr|{dia}|{nome}")
             if ultima_data:
                 n_antes = anteriores["serie"].nunique()
