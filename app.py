@@ -789,6 +789,9 @@ def ao_adicionar_exercicio(prefixo, dia, so_hoje_chave=None):
             st.session_state["aviso"] = f"Não consegui salvar o exercício novo: {erro}"
             return
     novo = {k: item[k] for k in ("exercicio", "series", "meta_reps")}
+    if so_hoje_chave:
+        # Se tinha sido tirado só deste treino, volta a aparecer
+        st.session_state.get(so_hoje_chave.replace("extras|", "fora|", 1), set()).discard(novo["exercicio"])
 
     if so_hoje_chave and not st.session_state.get(f"{prefixo}_manter", True):
         extras = st.session_state.setdefault(so_hoje_chave, [])
@@ -819,6 +822,27 @@ def ao_remover_exercicio(dia, nome):
     for prefixo in ("pl_s", "pl_m"):
         st.session_state.pop(f"{prefixo}|{dia}|{nome}", None)
     mudar_plano(remover, f"{nome} saiu do treino de {dia} (o histórico dele continua salvo)")
+
+
+def ao_pedir_tirar(chave):
+    st.session_state["confirmar_tirar"] = chave
+
+
+def ao_cancelar_tirar():
+    st.session_state.pop("confirmar_tirar", None)
+
+
+def ao_tirar_hoje(chave_extras, chave_fora, nome):
+    """Some só deste treino; o plano continua igual."""
+    st.session_state.pop("confirmar_tirar", None)
+    st.session_state[chave_extras] = [e for e in st.session_state.get(chave_extras, []) if e["exercicio"] != nome]
+    st.session_state.setdefault(chave_fora, set()).add(nome)
+    st.session_state["salvo"] = f"{nome} saiu deste treino"
+
+
+def ao_tirar_do_plano(dia, nome):
+    st.session_state.pop("confirmar_tirar", None)
+    ao_remover_exercicio(dia, nome)
 
 
 def ao_editar_exercicio(dia, nome):
@@ -899,11 +923,13 @@ def tela_montar(plano):
 COLUNAS_SERIE = [0.5, 1.8, 1.8, 1, 1]
 
 
-def exercicios_do_treino(plano, do_dia, dia, chave_extras):
-    """Os exercícios do plano do dia, mais os incluídos só neste treino."""
+def exercicios_do_treino(plano, do_dia, dia, chave_extras, chave_fora):
+    """Os exercícios do plano do dia, mais os incluídos só neste treino, menos os tirados só deste treino."""
+    gravados_hoje = set(do_dia["exercicio"])
+    fora = st.session_state.get(chave_fora, set()) - gravados_hoje
     itens = [{"exercicio": r["exercicio"], "series": int(r["series"]), "meta_reps": r["meta_reps"], "extra": False}
-             for _, r in plano[plano["dia"] == dia].iterrows()]
-    nomes = {i["exercicio"] for i in itens}
+             for _, r in plano[plano["dia"] == dia].iterrows() if r["exercicio"] not in fora]
+    nomes = {i["exercicio"] for i in itens} | fora
     # Um exercício "só hoje" continua aparecendo depois de recarregar, porque já tem série gravada
     gravados = [{"exercicio": n, "series": int(g["serie"].max()), "meta_reps": ""}
                 for n, g in do_dia.groupby("exercicio", sort=False)]
@@ -934,7 +960,8 @@ def tela_treino(plano, registros):
     dia = st.session_state["dia"]
     do_dia = registros[(registros["data"] == data_iso) & (registros["dia_treino"] == dia)]
     chave_extras = f"extras|{data_iso}|{dia}"
-    exercicios = exercicios_do_treino(plano, do_dia, dia, chave_extras)
+    chave_fora = f"fora|{data_iso}|{dia}"
+    exercicios = exercicios_do_treino(plano, do_dia, dia, chave_extras, chave_fora)
     progresso = st.empty()
     if data_iso == hoje.isoformat():
         cronometro_descanso(do_dia)
@@ -1029,7 +1056,30 @@ def tela_treino(plano, registros):
                 if partes:
                     st.caption(" · ".join(partes))
 
-            st.button("＋ Série", key=f"add|{data_iso}|{dia}|{nome}", on_click=ao_adicionar_serie, args=(chave_qtd,))
+            acoes = st.columns(2)
+            acoes[0].button("＋ Série", key=f"add|{data_iso}|{dia}|{nome}", **LARGURA_TOTAL,
+                            on_click=ao_adicionar_serie, args=(chave_qtd,))
+            chave_tirar = f"{data_iso}|{dia}|{nome}"
+            # Com série gravada hoje o exercício faz parte do histórico: apague as séries antes
+            acoes[1].button("🗑️ Excluir exercício", key=f"tirar|{chave_tirar}", **LARGURA_TOTAL,
+                            disabled=not salvas_hoje.empty,
+                            help="Apague as séries gravadas antes de excluir" if not salvas_hoje.empty
+                            else "Tirar este exercício do treino",
+                            on_click=ao_pedir_tirar, args=(chave_tirar,))
+            if st.session_state.get("confirmar_tirar") == chave_tirar:
+                if ex["extra"]:
+                    st.warning(f"Tirar {nome} deste treino?")
+                    conf = st.columns(2)
+                    conf[0].button("Sim, tirar", key=f"th|{chave_tirar}", type="primary", **LARGURA_TOTAL,
+                                   on_click=ao_tirar_hoje, args=(chave_extras, chave_fora, nome))
+                else:
+                    st.warning(f"Tirar {nome} só hoje ou do plano de {dia.lower()}? O histórico continua salvo.")
+                    conf = st.columns(3)
+                    conf[0].button("Só hoje", key=f"th|{chave_tirar}", **LARGURA_TOTAL,
+                                   on_click=ao_tirar_hoje, args=(chave_extras, chave_fora, nome))
+                    conf[1].button("Do plano", key=f"tp|{chave_tirar}", type="primary", **LARGURA_TOTAL,
+                                   on_click=ao_tirar_do_plano, args=(dia, nome))
+                conf[-1].button("Cancelar", key=f"tn|{chave_tirar}", **LARGURA_TOTAL, on_click=ao_cancelar_tirar)
 
     with st.expander("＋ Incluir exercício neste treino"):
         prefixo = f"tr_add|{data_iso}|{dia}"
